@@ -8,7 +8,7 @@
 
 #import "TKShelfViewController.h"
 
-#define kTKShelfViewControllerHorizontalInset 20.0
+#define kTKShelfViewControllerHorizontalInset 40.0
 #define kTKShelfViewControllerPageControlHeight 44.0
 
 @interface TKShelfViewController () <UIScrollViewDelegate>
@@ -181,7 +181,14 @@
 {
     CGRect frame = self.scrollView.bounds;
     frame.origin.x = index * CGRectGetWidth(self.scrollView.frame);
-    subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset / 2, 0);
+    CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+    subview.bounds = self.view.bounds;
+    subview.transform = CGAffineTransformMakeScale(0.65, 0.65);
+    subview.center = center;
+//    frame = subview.frame;
+//    frame.origin.y = 0;
+//    frame.size.height = CGRectGetHeight(self.view.bounds);
+//    subview.frame = frame;
 }
 
 #pragma mark UIScrollViewDelegate
