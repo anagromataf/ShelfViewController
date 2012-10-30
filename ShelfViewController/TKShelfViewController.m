@@ -14,6 +14,10 @@
 @interface TKShelfViewController () <UIScrollViewDelegate>
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIPageControl *pageControl;
+
+#pragma mark ViewController Containment
+@property (nonatomic, readwrite) NSArray *subViewControllers;
+
 @end
 
 @implementation TKShelfViewController
@@ -67,5 +71,27 @@
     
     [self.view addSubview:self.pageControl];
 } 
+
+#pragma mark ViewController Containment
+
+- (void)addSubViewController:(UIViewController *)aViewController;
+{
+    NSMutableArray *subViewControllers = [self.subViewControllers mutableCopy];
+    if (!subViewControllers) {
+        subViewControllers = [[NSMutableArray alloc] init];
+    }
+    [subViewControllers addObject:aViewController];
+    self.subViewControllers = subViewControllers;
+}
+
+- (void)removeSubViewController:(UIViewController *)aViewController;
+{
+    NSMutableArray *subViewControllers = [self.subViewControllers mutableCopy];
+    if (!subViewControllers) {
+        subViewControllers = [[NSMutableArray alloc] init];
+    }
+    [subViewControllers removeObject:aViewController];
+    self.subViewControllers = subViewControllers;
+}
 
 @end

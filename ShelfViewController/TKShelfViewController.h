@@ -10,4 +10,11 @@
 
 @interface TKShelfViewController : UIViewController
 
+#pragma mark ViewController Containment
+
+@property (nonatomic, readonly) NSArray *subViewControllers;
+
+- (void)addSubViewController:(UIViewController *)aViewController;
+- (void)removeSubViewController:(UIViewController *)aViewController;
+
 @end
