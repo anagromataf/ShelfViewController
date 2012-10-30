@@ -20,13 +20,16 @@
 
 #pragma mark Shelf Management
 @property (nonatomic, readonly) NSUInteger numberOfPages;
+@property (nonatomic, readonly) NSMutableSet *visibleSubViewControllers;
 - (void)updateShelf;
-
+- (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
 @end
 
 @implementation TKShelfViewController
 
 #pragma mark Life-cycle
+
+@synthesize visibleSubViewControllers = _visibleSubViewControllers;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -49,11 +52,12 @@
     CGRect scrollViewFrame = CGRectInset(self.view.bounds, kTKShelfViewControllerHorizontalInset, 0);
     
     self.scrollView = [[UIScrollView alloc] initWithFrame:scrollViewFrame];
+    self.scrollView.clipsToBounds = NO;
     self.scrollView.pagingEnabled = YES;
     self.scrollView.showsHorizontalScrollIndicator = NO;
     self.scrollView.showsVerticalScrollIndicator = NO;
     self.scrollView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-    self.scrollView.backgroundColor = [UIColor lightGrayColor];
+    self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.delegate = self;
     
     [self.view addSubview:self.scrollView];
@@ -111,6 +115,14 @@
     return [self.subViewControllers count];
 }
 
+- (NSMutableSet *)visibleSubViewControllers;
+{
+    if (_visibleSubViewControllers == nil) {
+        _visibleSubViewControllers = [[NSMutableSet alloc] init];
+    }
+    return _visibleSubViewControllers;
+}
+
 - (void)updateShelf;
 {
     CGRect visibleBounds = self.scrollView.bounds;
@@ -122,9 +134,54 @@
     int currentPageIndex = floor(CGRectGetMidX(visibleBounds) / CGRectGetWidth(visibleBounds));
     self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfPages);
     
-    int firstNeededPageIndex = floor(CGRectGetMinX(visibleBounds) / CGRectGetWidth(visibleBounds));
-    int lastNeededPageIndex = floor((CGRectGetMaxX(visibleBounds)-1) / CGRectGetWidth(visibleBounds));
+    int firstNeededPageIndex = floor((CGRectGetMinX(visibleBounds)-kTKShelfViewControllerHorizontalInset) / CGRectGetWidth(visibleBounds));
+    int lastNeededPageIndex = floor((CGRectGetMaxX(visibleBounds)+kTKShelfViewControllerHorizontalInset-1) / CGRectGetWidth(visibleBounds));
     
+    
+    // Remove not needed view controllers
+    // ----------------------------------
+    
+    NSMutableSet *removedViewControllers = [[NSMutableSet alloc] init];
+    for (UIViewController *viewController in self.visibleSubViewControllers) {
+        NSUInteger index = [self.subViewControllers indexOfObject:viewController];
+        if (index < firstNeededPageIndex || index > lastNeededPageIndex) {
+            [viewController beginAppearanceTransition:NO animated:NO];
+            [viewController.view removeFromSuperview];
+            [viewController willMoveToParentViewController:nil];
+            [viewController removeFromParentViewController];
+            [viewController didMoveToParentViewController:nil];
+            [removedViewControllers addObject:viewController];
+        }
+    }
+    [self.visibleSubViewControllers minusSet:removedViewControllers];
+    
+    
+    // Add missing view controllers
+    // ----------------------------
+    for (int index = firstNeededPageIndex; index <= lastNeededPageIndex; index++) {
+        
+        if (index < 0 || index >= self.numberOfPages) {
+            continue;
+        }
+        
+        UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+        if (![self.visibleSubViewControllers containsObject:viewController]) {
+            [viewController willMoveToParentViewController:self];
+            [self addChildViewController:viewController];
+            [viewController didMoveToParentViewController:self];
+            [self.visibleSubViewControllers addObject:viewController];
+            [self configureSubview:viewController.view forIndex:index];
+            [self.scrollView addSubview:viewController.view];
+            [viewController beginAppearanceTransition:YES animated:NO];
+        }
+    }
+}
+
+- (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
+{
+    CGRect frame = self.scrollView.bounds;
+    frame.origin.x = index * CGRectGetWidth(self.scrollView.frame);
+    subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset / 2, 0);
 }
 
 #pragma mark UIScrollViewDelegate
