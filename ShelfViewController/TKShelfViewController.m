@@ -18,6 +18,10 @@
 #pragma mark ViewController Containment
 @property (nonatomic, readwrite) NSArray *subViewControllers;
 
+#pragma mark Shelf Management
+@property (nonatomic, readonly) NSUInteger numberOfPages;
+- (void)updateShelf;
+
 @end
 
 @implementation TKShelfViewController
@@ -39,8 +43,8 @@
 {
     [super viewDidLoad];
     
-    // Scroll View
-    // -----------
+    // Create Scroll View
+    // ------------------
     
     CGRect scrollViewFrame = CGRectInset(self.view.bounds, kTKShelfViewControllerHorizontalInset, 0);
     
@@ -55,8 +59,8 @@
     [self.view addSubview:self.scrollView];
     
     
-    // Page Control
-    // ------------
+    // Create Page Control
+    // -------------------
     
     CGRect pageControlFrame = CGRectMake(0,
                                          CGRectGetHeight(self.view.bounds) - kTKShelfViewControllerPageControlHeight,
@@ -70,6 +74,12 @@
     self.pageControl.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.5];
     
     [self.view addSubview:self.pageControl];
+    
+    
+    // Update the Shelf
+    // ----------------
+    
+    [self updateShelf];
 } 
 
 #pragma mark ViewController Containment
@@ -92,6 +102,36 @@
     }
     [subViewControllers removeObject:aViewController];
     self.subViewControllers = subViewControllers;
+}
+
+#pragma mark Shelf Management
+
+- (NSUInteger)numberOfPages;
+{
+    return [self.subViewControllers count];
+}
+
+- (void)updateShelf;
+{
+    CGRect visibleBounds = self.scrollView.bounds;
+    
+    self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(visibleBounds) * self.numberOfPages,
+                                             CGRectGetHeight(visibleBounds));
+    
+    self.pageControl.numberOfPages = self.numberOfPages;
+    int currentPageIndex = floor(CGRectGetMidX(visibleBounds) / CGRectGetWidth(visibleBounds));
+    self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfPages);
+    
+    int firstNeededPageIndex = floor(CGRectGetMinX(visibleBounds) / CGRectGetWidth(visibleBounds));
+    int lastNeededPageIndex = floor((CGRectGetMaxX(visibleBounds)-1) / CGRectGetWidth(visibleBounds));
+    
+}
+
+#pragma mark UIScrollViewDelegate
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView;
+{
+    [self updateShelf];
 }
 
 @end
