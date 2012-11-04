@@ -12,6 +12,11 @@
 
 + (void)animateWithDuration:(NSTimeInterval)duration
                  animations:(void (^)(void))animations
-              skipAnimation:(BOOL)skipAnimation;
+              skipAnimations:(BOOL)skipAnimation;
+
++ (void)animateWithDuration:(NSTimeInterval)duration
+                 animations:(void (^)(void))animations
+                 completion:(void (^)(BOOL))completion
+             skipAnimations:(BOOL)skipAnimations;
 
 @end

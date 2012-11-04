@@ -12,12 +12,25 @@
 
 + (void)animateWithDuration:(NSTimeInterval)duration
                  animations:(void (^)(void))animations
-              skipAnimation:(BOOL)skipAnimation;
+              skipAnimations:(BOOL)skipAnimations;
 {
-    if (skipAnimation) {
+    if (skipAnimations) {
         animations();
     } else {
         [self animateWithDuration:duration animations:animations];
+    }
+}
+
++ (void)animateWithDuration:(NSTimeInterval)duration
+                 animations:(void (^)(void))animations
+                 completion:(void (^)(BOOL))completion
+             skipAnimations:(BOOL)skipAnimations;
+{
+    if (skipAnimations) {
+        animations();
+        completion(YES);
+    } else {
+        [self animateWithDuration:duration animations:animations completion:completion];
     }
 }
 

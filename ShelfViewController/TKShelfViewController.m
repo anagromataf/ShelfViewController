@@ -30,16 +30,25 @@
 - (void)updateShelf;
 - (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
 
+#pragma mark Showing & Hiding Shelf
+
+@property (nonatomic, strong) UIPinchGestureRecognizer *pinchGestureRecognizer;
+@property (nonatomic, strong) UITapGestureRecognizer *tapGestureRecognizer;
+
+@property (nonatomic, assign, getter=isShelfHidden) BOOL shelfHidden;
+@property (nonatomic, assign, getter=isShelfAnimating) BOOL animatingShelf;
+
+- (void)hideShelf:(BOOL)animated;
+- (void)showShelf:(BOOL)animated;
+
+- (void)prepareHidingShelf;
+- (void)finalizeHidingShelf;
+- (void)prepareShowingShelf;
+- (void)finalizeShowingShelf;
+
 #pragma mark Paging
 - (void)pageControlDidChangeValue:(id)sender;
 - (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
-
-#pragma mark Focus
-@property (nonatomic, assign) CGFloat focusFactor;
-@property (nonatomic, assign, getter = isFocused) BOOL focus;
-
-- (void)setFocusFactor:(CGFloat)focusFactor;
-- (void)setFocusFactor:(CGFloat)focusFactor animated:(BOOL)animated;
 
 #pragma mark Handle Gestures
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
@@ -54,15 +63,6 @@
 #pragma mark Life-cycle
 
 @synthesize visibleSubViewControllers = _visibleSubViewControllers;
-
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
-{
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self) {
-        // Custom initialization
-    }
-    return self;
-}
 
 #pragma mark UIViewController
 
@@ -82,6 +82,11 @@
     self.scrollView.showsVerticalScrollIndicator = NO;
     self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.delegate = self;
+    
+    CATransform3D transformation = CATransform3DIdentity;
+    transformation.m34 = -1.0/500.0;
+    transformation = CATransform3DTranslate(transformation, 0, 0, -200);
+    self.scrollView.layer.transform  = transformation;
     
     [self.view addSubview:self.scrollView];
     [self.view addGestureRecognizer:self.scrollView.panGestureRecognizer];
@@ -106,16 +111,19 @@
     [self.view addSubview:self.pageControl];
     
     
+    // Create Gesture Recognizer
+    // -------------------------
+    
+    self.pinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
+    [self.view addGestureRecognizer:self.pinchGestureRecognizer];
+    
+    self.tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
+    [self.view addGestureRecognizer:self.tapGestureRecognizer];
+    
     // Update the Shelf
     // ----------------
     
     [self updateShelf];
-    
-    
-    // Set Focus
-    // ---------
-    
-    self.focus = NO;
 }
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
@@ -130,8 +138,10 @@
     self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentPage, 0);
     
     for (UIViewController *viewController in self.visibleSubViewControllers) {
-        NSUInteger index = [self.subViewControllers indexOfObject:viewController];
-        [self configureSubview:viewController.view.superview forIndex:index];
+        if (viewController.view.superview == self.scrollView) {
+            NSUInteger index = [self.subViewControllers indexOfObject:viewController];
+            [self configureSubview:viewController.view forIndex:index];
+        }
     }
 }
 
@@ -212,10 +222,7 @@
         if (index < firstNeededPageIndex || index > lastNeededPageIndex) {
             
             [viewController beginAppearanceTransition:NO animated:NO];
-            
-            [viewController.view.superview removeFromSuperview];
             [viewController.view removeFromSuperview];
-            
             [viewController endAppearanceTransition];
             
             [viewController willMoveToParentViewController:nil];
@@ -248,15 +255,8 @@
             
             [viewController beginAppearanceTransition:YES animated:NO];
             
-            UIView *intermediateView = [[UIView alloc] init];
-            [intermediateView addSubview:viewController.view];
-            [self.scrollView addSubview:viewController.view.superview];
-            
-            [self configureSubview:viewController.view.superview forIndex:index];
-            viewController.view.frame = viewController.view.superview.bounds;
-            
-            [self configureIntermediateView:viewController.view.superview forIndex:index];
-            
+            [self.scrollView addSubview:viewController.view];
+            [self configureSubview:viewController.view forIndex:index];
             [viewController.view setUserInteractionEnabled:NO];
             
             [viewController endAppearanceTransition];
@@ -271,13 +271,120 @@
     subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset, 0);
 }
 
-- (void)configureIntermediateView:(UIView *)intermediateView forIndex:(NSUInteger)index;
+#pragma mark Showing & Hiding Shelf
+
+#pragma mark Hiding Shelf
+
+- (void)prepareHidingShelf;
 {
-    UIPinchGestureRecognizer *pinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
-    [intermediateView addGestureRecognizer:pinchGestureRecognizer];
+    self.scrollView.scrollEnabled = NO;
+    self.pageControl.enabled = NO;
     
-    UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
-    [intermediateView addGestureRecognizer:tapGestureRecognizer];
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    
+    [viewController.view removeFromSuperview];
+    [self.view insertSubview:viewController.view belowSubview:self.pageControl];
+    
+    viewController.view.layer.transform = self.scrollView.layer.transform;
+    viewController.view.frame = self.view.bounds;
+    
+    self.animatingShelf = YES;
+}
+
+- (void)hideShelf:(BOOL)animated;
+{
+    if (self.isShelfAnimating || self.isShelfHidden) {
+        return;
+    }
+    
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    
+    [self prepareHidingShelf];
+    [UIView animateWithDuration:0.2
+                     animations:^{
+                         viewController.view.layer.transform = CATransform3DIdentity;
+                         self.pageControl.alpha = 0;
+                         for (UIViewController *viewController in self.visibleSubViewControllers) {
+                             if (viewController.view.superview == self.scrollView) {
+                                 viewController.view.alpha = 0;
+                             }
+                         }
+                     }
+                     completion:^(BOOL completed) {
+                         [self finalizeHidingShelf];
+                     }
+                 skipAnimations:!animated];
+}
+
+- (void)finalizeHidingShelf;
+{
+    self.pageControl.hidden = YES;
+    
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    [viewController.view setUserInteractionEnabled:YES];
+    
+    self.animatingShelf = NO;
+    self.shelfHidden = YES;
+}
+
+#pragma mark Showing Shelf
+
+- (void)prepareShowingShelf;
+{
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    [viewController.view setUserInteractionEnabled:NO];
+    
+    self.pageControl.hidden = NO;
+    self.animatingShelf = YES;
+}
+
+- (void)showShelf:(BOOL)animated;
+{
+    if (self.isShelfAnimating || !self.isShelfHidden) {
+        return;
+    }
+    
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    viewController.view.layer.transform = CATransform3DIdentity;
+    [self prepareShowingShelf];
+    [UIView animateWithDuration:0.2
+                     animations:^{
+                         self.pageControl.alpha = 1;
+                         CATransform3D transformation = CATransform3DIdentity;
+                         transformation.m34 = -1.0/500.0;
+                         transformation = CATransform3DTranslate(transformation, 0, 0, -200);
+                         viewController.view.layer.transform = transformation;
+                         for (UIViewController *viewController in self.visibleSubViewControllers) {
+                             if (viewController.view.superview == self.scrollView) {
+                                 viewController.view.alpha = 1;
+                             }
+                         }
+                     }
+                     completion:^(BOOL completed) {
+                         [self finalizeShowingShelf];
+                     }
+                 skipAnimations:!animated];
+    
+}
+
+- (void)finalizeShowingShelf;
+{
+    NSUInteger index = self.currentPage;
+    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    [viewController.view removeFromSuperview];
+    viewController.view.layer.transform = CATransform3DIdentity;
+    [self.scrollView addSubview:viewController.view];
+    [self configureSubview:viewController.view forIndex:index];
+    
+    self.pageControl.enabled = YES;
+    self.scrollView.scrollEnabled = YES;
+    self.animatingShelf = NO;
+    self.shelfHidden = NO;
 }
 
 #pragma mark Paging
@@ -294,46 +401,34 @@
     [self.scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * index, 0) animated:animated];
 }
 
-#pragma mark Focus
-
-- (void)setFocusFactor:(CGFloat)focusFactor;
-{
-    [self setFocusFactor:focusFactor animated:NO];
-}
-
-- (void)setFocusFactor:(CGFloat)focusFactor animated:(BOOL)animated;
-{
-    [UIView animateWithDuration:0.2 animations:^{
-        CATransform3D transformation = CATransform3DIdentity;
-        transformation.m34 = -1.0/500.0;
-        transformation = CATransform3DTranslate(transformation, 0, 0, -200 * focusFactor);
-        self.scrollView.layer.transform  = transformation;
-    } skipAnimation:!animated];
-}
-
-- (void)setFocus:(BOOL)focus;
-{
-    [self setFocus:focus animated:NO];
-}
-
-- (void)setFocus:(BOOL)focus animated:(BOOL)animated;
-{
-    if (_focus != focus) {
-        _focus = focus;
-        [self setFocusFactor:focus ? 1 : 0 animated:YES];
-    }
-}
-
 #pragma mark Handle Gestures
 
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
 {
-    
+    switch (pinchGestureRecognizer.state) {
+        case UIGestureRecognizerStateBegan:
+            if (self.shelfHidden) {
+                if (pinchGestureRecognizer.scale >= 1) {
+                    pinchGestureRecognizer.enabled = NO;
+                    pinchGestureRecognizer.enabled = YES;
+                } else {
+                    [self showShelf:YES];
+                }
+            } else {
+                if (pinchGestureRecognizer.scale > 1) {
+                    [self hideShelf:YES];
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
 }
 
 - (void)handleTapGesture:(UITapGestureRecognizer *)tapGestureRecognizer;
 {
-    
+    [self hideShelf:YES];
 }
 
 #pragma mark UIScrollViewDelegate
