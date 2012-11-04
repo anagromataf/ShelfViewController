@@ -29,9 +29,14 @@
 - (void)updateShelf;
 - (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
 
+#pragma mark Paging
+- (void)pageControlDidChangeValue:(id)sender;
+- (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
+
 #pragma mark Focus
 @property (nonatomic, assign) CGFloat focus;
 - (void)setFocus:(CGFloat)focus animated:(BOOL)animated;
+
 @end
 
 #pragma mark -
@@ -70,12 +75,6 @@
     self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.delegate = self;
     
-    CATransform3D transformation = CATransform3DIdentity;
-    transformation.m34 = -1.0/500.0;
-    self.scrollView.layer.transform = transformation;
-    
-    self.focus = 0;
-    
     [self.view addSubview:self.scrollView];
     [self.view addGestureRecognizer:self.scrollView.panGestureRecognizer];
     
@@ -93,6 +92,8 @@
     self.pageControl.hidesForSinglePage = NO;
     self.pageControl.defersCurrentPageDisplay = YES;
     self.pageControl.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.5];
+    
+    [self.pageControl addTarget:self action:@selector(pageControlDidChangeValue:) forControlEvents:UIControlEventValueChanged];
     
     [self.view addSubview:self.pageControl];
     
@@ -237,6 +238,20 @@
     CGRect frame = self.scrollView.bounds;
     frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
     subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset, 0);
+}
+
+#pragma mark Paging
+
+- (void)pageControlDidChangeValue:(id)sender;
+{
+    if (self.pageControl == sender) {
+        [self showSubviewAtIndex:self.pageControl.currentPage animated:YES];
+    }
+}
+
+- (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
+{
+    [self.scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * index, 0) animated:animated];
 }
 
 #pragma mark Focus
