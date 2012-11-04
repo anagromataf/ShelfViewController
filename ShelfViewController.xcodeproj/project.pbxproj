@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F67DEAA316442276005C52A9 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F67DEAA216442276005C52A9 /* QuartzCore.framework */; };
 		F6AA5CB1164066A100317DF6 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F6AA5CB0164066A100317DF6 /* UIKit.framework */; };
 		F6AA5CB3164066A100317DF6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F6AA5CB2164066A100317DF6 /* Foundation.framework */; };
 		F6AA5CB5164066A100317DF6 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F6AA5CB4164066A100317DF6 /* CoreGraphics.framework */; };
@@ -17,9 +18,11 @@
 		F6AA5CC5164066A100317DF6 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F6AA5CC4164066A100317DF6 /* Default@2x.png */; };
 		F6AA5CC7164066A100317DF6 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F6AA5CC6164066A100317DF6 /* Default-568h@2x.png */; };
 		F6AA5CD0164066FF00317DF6 /* TKShelfViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F6AA5CCF164066FF00317DF6 /* TKShelfViewController.m */; };
+		F6DBAC821644311D00D7236D /* UIView+TKShelfViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F6DBAC811644311D00D7236D /* UIView+TKShelfViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F67DEAA216442276005C52A9 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		F6AA5CAC164066A100317DF6 /* ShelfViewController.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShelfViewController.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6AA5CB0164066A100317DF6 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		F6AA5CB2164066A100317DF6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -35,6 +38,8 @@
 		F6AA5CC6164066A100317DF6 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		F6AA5CCE164066FF00317DF6 /* TKShelfViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TKShelfViewController.h; sourceTree = "<group>"; };
 		F6AA5CCF164066FF00317DF6 /* TKShelfViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TKShelfViewController.m; sourceTree = "<group>"; };
+		F6DBAC801644311D00D7236D /* UIView+TKShelfViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIView+TKShelfViewController.h"; sourceTree = "<group>"; };
+		F6DBAC811644311D00D7236D /* UIView+TKShelfViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+TKShelfViewController.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F67DEAA316442276005C52A9 /* QuartzCore.framework in Frameworks */,
 				F6AA5CB1164066A100317DF6 /* UIKit.framework in Frameworks */,
 				F6AA5CB3164066A100317DF6 /* Foundation.framework in Frameworks */,
 				F6AA5CB5164066A100317DF6 /* CoreGraphics.framework in Frameworks */,
@@ -71,6 +77,7 @@
 		F6AA5CAF164066A100317DF6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F67DEAA216442276005C52A9 /* QuartzCore.framework */,
 				F6AA5CB0164066A100317DF6 /* UIKit.framework */,
 				F6AA5CB2164066A100317DF6 /* Foundation.framework */,
 				F6AA5CB4164066A100317DF6 /* CoreGraphics.framework */,
@@ -81,6 +88,7 @@
 		F6AA5CB6164066A100317DF6 /* ShelfViewController */ = {
 			isa = PBXGroup;
 			children = (
+				F6DBAC7F164430FF00D7236D /* Cocoa Additions */,
 				F6AA5CBF164066A100317DF6 /* TKAppDelegate.h */,
 				F6AA5CC0164066A100317DF6 /* TKAppDelegate.m */,
 				F6AA5CCD164066EC00317DF6 /* User Interface */,
@@ -110,6 +118,15 @@
 				F6AA5CCF164066FF00317DF6 /* TKShelfViewController.m */,
 			);
 			name = "User Interface";
+			sourceTree = "<group>";
+		};
+		F6DBAC7F164430FF00D7236D /* Cocoa Additions */ = {
+			isa = PBXGroup;
+			children = (
+				F6DBAC801644311D00D7236D /* UIView+TKShelfViewController.h */,
+				F6DBAC811644311D00D7236D /* UIView+TKShelfViewController.m */,
+			);
+			name = "Cocoa Additions";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -181,6 +198,7 @@
 				F6AA5CBD164066A100317DF6 /* main.m in Sources */,
 				F6AA5CC1164066A100317DF6 /* TKAppDelegate.m in Sources */,
 				F6AA5CD0164066FF00317DF6 /* TKShelfViewController.m in Sources */,
+				F6DBAC821644311D00D7236D /* UIView+TKShelfViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +309,7 @@
 				F6AA5CCC164066A100317DF6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
