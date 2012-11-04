@@ -120,13 +120,14 @@
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
 {
+    NSUInteger currentPage = self.currentPage;
+    
     [UIView animateWithDuration:duration animations:^{
-        NSUInteger oldIndex = floor(CGRectGetMinX(self.scrollView.bounds) / CGRectGetWidth(self.scrollView.bounds));
-        
         CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerHorizontalInset, 0);
         self.scrollView.frame = scrollViewFrame;
-        self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * oldIndex, 0);
     }];
+    
+    self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentPage, 0);
     
     for (UIViewController *viewController in self.visibleSubViewControllers) {
         NSUInteger index = [self.subViewControllers indexOfObject:viewController];
