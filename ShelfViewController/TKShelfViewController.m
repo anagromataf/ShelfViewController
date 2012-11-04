@@ -67,7 +67,6 @@
     self.scrollView.pagingEnabled = YES;
     self.scrollView.showsHorizontalScrollIndicator = NO;
     self.scrollView.showsVerticalScrollIndicator = NO;
-    self.scrollView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
     self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.delegate = self;
     
@@ -102,6 +101,22 @@
     // ----------------
     
     [self updateShelf];
+}
+
+- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
+{
+    [UIView animateWithDuration:duration animations:^{
+        NSUInteger oldIndex = floor(CGRectGetMinX(self.scrollView.bounds) / CGRectGetWidth(self.scrollView.bounds));
+        
+        CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerHorizontalInset, 0);
+        self.scrollView.frame = scrollViewFrame;
+        self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * oldIndex, 0);
+    }];
+    
+    for (UIViewController *viewController in self.visibleSubViewControllers) {
+        NSUInteger index = [self.subViewControllers indexOfObject:viewController];
+        [self configureSubview:viewController.view forIndex:index];
+    }
 }
 
 #pragma mark ViewController Containment
