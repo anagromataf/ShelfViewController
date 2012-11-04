@@ -102,6 +102,12 @@
     // ----------------
     
     [self updateShelf];
+    
+    
+    // Set Focus
+    // ---------
+    
+    self.focus = 0;
 }
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
@@ -116,7 +122,7 @@
     
     for (UIViewController *viewController in self.visibleSubViewControllers) {
         NSUInteger index = [self.subViewControllers indexOfObject:viewController];
-        [self configureSubview:viewController.view forIndex:index];
+        [self configureSubview:viewController.view.superview forIndex:index];
     }
 }
 
@@ -191,6 +197,7 @@
             
             [viewController beginAppearanceTransition:NO animated:NO];
             
+            [viewController.view.superview removeFromSuperview];
             [viewController.view removeFromSuperview];
             
             [viewController endAppearanceTransition];
@@ -225,8 +232,12 @@
             
             [viewController beginAppearanceTransition:YES animated:NO];
             
-            [self configureSubview:viewController.view forIndex:index];
-            [self.scrollView addSubview:viewController.view];
+            UIView *intermediateView = [[UIView alloc] init];
+            [intermediateView addSubview:viewController.view];
+            [self.scrollView addSubview:viewController.view.superview];
+            
+            [self configureSubview:viewController.view.superview forIndex:index];
+            viewController.view.frame = viewController.view.superview.bounds;
             
             [viewController endAppearanceTransition];
         }
