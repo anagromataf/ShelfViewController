@@ -25,6 +25,7 @@
 
 #pragma mark Shelf Management
 @property (nonatomic, readonly) NSUInteger numberOfPages;
+@property (nonatomic, readonly) NSUInteger currentPage;
 @property (nonatomic, readonly) NSMutableSet *visibleSubViewControllers;
 - (void)updateShelf;
 - (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
@@ -34,8 +35,15 @@
 - (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
 
 #pragma mark Focus
-@property (nonatomic, assign) CGFloat focus;
-- (void)setFocus:(CGFloat)focus animated:(BOOL)animated;
+@property (nonatomic, assign) CGFloat focusFactor;
+@property (nonatomic, assign, getter = isFocused) BOOL focus;
+
+- (void)setFocusFactor:(CGFloat)focusFactor;
+- (void)setFocusFactor:(CGFloat)focusFactor animated:(BOOL)animated;
+
+#pragma mark Handle Gestures
+- (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
+- (void)handleTapGesture:(UITapGestureRecognizer *)tapGestureRecognizer;
 
 @end
 
@@ -107,7 +115,7 @@
     // Set Focus
     // ---------
     
-    self.focus = 0;
+    self.focus = NO;
 }
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
@@ -157,6 +165,13 @@
 - (NSUInteger)numberOfPages;
 {
     return [self.subViewControllers count];
+}
+
+- (NSUInteger)currentPage;
+{
+    CGRect scrollViewBounds = self.scrollView.bounds;
+    CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
+    return floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
 }
 
 - (NSMutableSet *)visibleSubViewControllers;
@@ -239,6 +254,10 @@
             [self configureSubview:viewController.view.superview forIndex:index];
             viewController.view.frame = viewController.view.superview.bounds;
             
+            [self configureIntermediateView:viewController.view.superview forIndex:index];
+            
+            [viewController.view setUserInteractionEnabled:NO];
+            
             [viewController endAppearanceTransition];
         }
     }
@@ -249,6 +268,15 @@
     CGRect frame = self.scrollView.bounds;
     frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
     subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset, 0);
+}
+
+- (void)configureIntermediateView:(UIView *)intermediateView forIndex:(NSUInteger)index;
+{
+    UIPinchGestureRecognizer *pinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
+    [intermediateView addGestureRecognizer:pinchGestureRecognizer];
+    
+    UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
+    [intermediateView addGestureRecognizer:tapGestureRecognizer];
 }
 
 #pragma mark Paging
@@ -267,27 +295,44 @@
 
 #pragma mark Focus
 
-- (void)setFocus:(CGFloat)focus;
+- (void)setFocusFactor:(CGFloat)focusFactor;
+{
+    [self setFocusFactor:focusFactor animated:NO];
+}
+
+- (void)setFocusFactor:(CGFloat)focusFactor animated:(BOOL)animated;
+{
+    [UIView animateWithDuration:0.2 animations:^{
+        CATransform3D transformation = CATransform3DIdentity;
+        transformation.m34 = -1.0/500.0;
+        transformation = CATransform3DTranslate(transformation, 0, 0, -200 * focusFactor);
+        self.scrollView.layer.transform  = transformation;
+    } skipAnimation:!animated];
+}
+
+- (void)setFocus:(BOOL)focus;
 {
     [self setFocus:focus animated:NO];
 }
 
-- (void)setFocus:(CGFloat)focus animated:(BOOL)animated;
+- (void)setFocus:(BOOL)focus animated:(BOOL)animated;
 {
-    focus = MAX(0, MIN(1, focus));
-    
-    if (focus != 0) {
-        self.scrollView.scrollEnabled = NO;
-    } else {
-        self.scrollView.scrollEnabled = YES;
+    if (_focus != focus) {
+        _focus = focus;
+        [self setFocusFactor:focus ? 1 : 0 animated:YES];
     }
+}
+
+#pragma mark Handle Gestures
+
+- (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
+{
     
-    [UIView animateWithDuration:0.2 animations:^{
-        CATransform3D transformation = CATransform3DIdentity;
-        transformation.m34 = -1.0/500.0;
-        transformation = CATransform3DTranslate(transformation, 0, 0, (1 - focus) * -200);
-        self.scrollView.layer.transform  = transformation;
-    } skipAnimation:!animated];
+}
+
+- (void)handleTapGesture:(UITapGestureRecognizer *)tapGestureRecognizer;
+{
+    
 }
 
 #pragma mark UIScrollViewDelegate
