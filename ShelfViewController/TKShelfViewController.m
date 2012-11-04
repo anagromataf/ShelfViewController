@@ -166,17 +166,18 @@
         return;
     }
     
-    CGRect visibleBounds = self.scrollView.bounds;
+    CGRect scrollViewBounds = self.scrollView.bounds;
+    CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
     
-    self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(visibleBounds) * self.numberOfPages,
-                                             CGRectGetHeight(visibleBounds));
+    self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(scrollViewBounds) * self.numberOfPages,
+                                             CGRectGetHeight(scrollViewBounds));
     
     self.pageControl.numberOfPages = self.numberOfPages;
-    int currentPageIndex = floor(CGRectGetMidX(visibleBounds) / CGRectGetWidth(visibleBounds));
+    int currentPageIndex = floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
     self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfPages);
     
-    int firstNeededPageIndex = floor((CGRectGetMinX(visibleBounds) - kTKShelfViewControllerHorizontalInset) / CGRectGetWidth(visibleBounds));
-    int lastNeededPageIndex = floor((CGRectGetMaxX(visibleBounds) + kTKShelfViewControllerHorizontalInset) / CGRectGetWidth(visibleBounds));
+    int firstNeededPageIndex = floor((CGRectGetMinX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
+    int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
     
     
     // Remove not needed view controllers
