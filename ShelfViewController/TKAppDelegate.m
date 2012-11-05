@@ -43,7 +43,7 @@
 
 #pragma mark TKShelfViewControllerDelegate
 
-- (UIViewController *)nextViewControllerForShelf:(TKShelfViewController *)aShelfViewController;
+- (UIViewController *)additionalViewControllerForShelfController:(TKShelfViewController *)aShelfViewController;
 {
     return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
 }

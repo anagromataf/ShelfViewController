@@ -11,7 +11,8 @@
 @class TKShelfViewController;
 
 @protocol TKShelfViewControllerDelegate <NSObject>
+@optional
 
-- (UIViewController *)nextViewControllerForShelf:(TKShelfViewController *)aShelfViewController;
+- (UIViewController *)additionalViewControllerForShelfController:(TKShelfViewController *)aShelfViewController;
 
 @end

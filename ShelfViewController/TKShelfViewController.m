@@ -281,40 +281,55 @@
             
             [self.scrollView addSubview:viewController.view];
             [self configureView:viewController.view forIndex:index];
-            [viewController.view setUserInteractionEnabled:NO];
+            
+            [viewController.view setUserInteractionEnabled:self.shelfHidden];
             
             [viewController endAppearanceTransition];
         }
     }
     
     
-    // Add new ViewController
+    // Additional ViewController
     // ----------------------
     
-    if (indexOfLastNeededViewController == self.numberOfViewControllers) {
-        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - indexOfLastNeededViewController;        
+    if (indexOfLastNeededViewController == self.numberOfViewControllers &&
+        [self.delegate respondsToSelector:@selector(additionalViewControllerForShelfController:)]) {
+        
+        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - indexOfLastNeededViewController;
+        
         if (offset > 0.2) {
+        
             if (self.currentlyAddingViewController == NO &&
                 self.nextViewController == nil) {
                 
-                self.nextViewController = [self.delegate nextViewControllerForShelf:self];
-                [self.scrollView addSubview:self.nextViewController.view];
+                UIViewController *viewController = [self.delegate additionalViewControllerForShelfController:self];
+                
+                if (viewController) {
+                    [viewController willMoveToParentViewController:self];
+                    [self addChildViewController:viewController];
+                    [viewController didMoveToParentViewController:self];
+                    
+                    [viewController beginAppearanceTransition:YES animated:NO];
+                    [self.scrollView addSubview:viewController.view];
+                    [viewController.view setUserInteractionEnabled:NO];
+                    [viewController endAppearanceTransition];
+                    
+                }
+                
+                self.nextViewController = viewController;
             }
             
             if (self.nextViewController) {
                 self.nextViewController.view.hidden = NO;
-                self.nextViewController.view.alpha = (offset - 0.2) * 3;
+                self.nextViewController.view.alpha = offset * 3;
                 
                 [self configureView:self.nextViewController.view forIndex:indexOfLastNeededViewController];
                 
-                CGFloat deltaX = MAX(0, (0.4 - offset)) * 300;
-                CGFloat rotation = MAX(0, (0.4 - offset)) * -30 * M_PI / 180.0;
-                
                 CGRect frame = self.nextViewController.view.frame;
-                frame.origin.x += deltaX;
+                frame.origin.y += CGRectGetHeight(frame) * MIN(1, MAX(0, 1 - offset * 3));
                 self.nextViewController.view.frame = frame;
-                self.nextViewController.view.transform = CGAffineTransformMakeRotation(rotation);
             }
+            
         } else {
             self.nextViewController.view.hidden = YES;
         }
@@ -501,14 +516,15 @@
         
         if (self.nextViewController) {
             if (offset > 0.4) {
-                UIViewController *nextViewController = self.nextViewController;
-                [self.nextViewController.view removeFromSuperview];
+                UIViewController *viewController = self.nextViewController;
                 [UIView animateWithDuration:0.2 animations:^{
-                   self.nextViewController.view.alpha = 1; 
+                    viewController.view.alpha = 1;
+                    [self configureView:viewController.view forIndex:lastNeededPageIndex];
                 }];
-                self.nextViewController = nil;
-                [self addViewController:nextViewController];
+                [self.visibleViewControllers addObject:viewController];
+                [self addViewController:viewController];
                 self.currentlyAddingViewController = YES;
+                self.nextViewController = nil;
             }
         }
     }
@@ -524,7 +540,15 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
 {
     if (self.nextViewController) {
-        [self.nextViewController.view removeFromSuperview];
+        UIViewController *viewController = self.nextViewController;
+        [viewController beginAppearanceTransition:NO animated:NO];
+        [viewController.view removeFromSuperview];
+        [viewController endAppearanceTransition];
+        
+        [viewController willMoveToParentViewController:nil];
+        [viewController removeFromParentViewController];
+        [viewController didMoveToParentViewController:nil];
+        
         self.nextViewController = nil;
     }
 }
