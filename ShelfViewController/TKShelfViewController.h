@@ -8,7 +8,11 @@
 
 #import <UIKit/UIKit.h>
 
+#import "TKShelfViewControllerDelegate.h"
+
 @interface TKShelfViewController : UIViewController
+
+@property (nonatomic, weak) id<TKShelfViewControllerDelegate> delegate;
 
 #pragma mark ViewController Containment
 

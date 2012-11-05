@@ -22,6 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F64596B21647316700C3F167 /* TKShelfViewControllerDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TKShelfViewControllerDelegate.h; sourceTree = "<group>"; };
 		F67DEAA216442276005C52A9 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		F6AA5CAC164066A100317DF6 /* ShelfViewController.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShelfViewController.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6AA5CB0164066A100317DF6 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -114,6 +115,7 @@
 		F6AA5CCD164066EC00317DF6 /* User Interface */ = {
 			isa = PBXGroup;
 			children = (
+				F64596B21647316700C3F167 /* TKShelfViewControllerDelegate.h */,
 				F6AA5CCE164066FF00317DF6 /* TKShelfViewController.h */,
 				F6AA5CCF164066FF00317DF6 /* TKShelfViewController.m */,
 			);

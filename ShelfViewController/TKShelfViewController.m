@@ -11,6 +11,8 @@
 
 #import "UIView+TKShelfViewController.h"
 
+#import "TKShelfViewControllerDelegate.h"
+
 #import "TKShelfViewController.h"
 
 #define kTKShelfViewControllerHorizontalInset 20.0
@@ -27,6 +29,8 @@
 @property (nonatomic, readonly) NSUInteger numberOfPages;
 @property (nonatomic, readonly) NSUInteger currentPage;
 @property (nonatomic, readonly) NSMutableSet *visibleSubViewControllers;
+@property (nonatomic, assign) BOOL addingViewController;
+@property (nonatomic, strong) UIViewController *nextViewController;
 - (void)updateShelf;
 - (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
 
@@ -80,6 +84,7 @@
     self.scrollView.pagingEnabled = YES;
     self.scrollView.showsHorizontalScrollIndicator = NO;
     self.scrollView.showsVerticalScrollIndicator = NO;
+    self.scrollView.alwaysBounceHorizontal = YES;
     self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.delegate = self;
     
@@ -119,6 +124,7 @@
     
     self.tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
     [self.view addGestureRecognizer:self.tapGestureRecognizer];
+    
     
     // Update the Shelf
     // ----------------
@@ -262,6 +268,39 @@
             [viewController endAppearanceTransition];
         }
     }
+    
+    
+    // Add new ViewController
+    // ----------------------
+    
+    if (lastNeededPageIndex == self.numberOfPages) {
+        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;        
+        if (offset > 0.2) {
+            if (self.addingViewController == NO &&
+                self.nextViewController == nil) {
+                
+                self.nextViewController = [self.delegate nextViewControllerForShelf:self];
+                [self.scrollView addSubview:self.nextViewController.view];
+            }
+            
+            if (self.nextViewController) {
+                self.nextViewController.view.hidden = NO;
+                self.nextViewController.view.alpha = (offset - 0.2) * 3;
+                
+                [self configureSubview:self.nextViewController.view forIndex:lastNeededPageIndex];
+                
+                CGFloat deltaX = MAX(0, (0.4 - offset)) * 300;
+                CGFloat rotation = MAX(0, (0.4 - offset)) * -30 * M_PI / 180.0;
+                
+                CGRect frame = self.nextViewController.view.frame;
+                frame.origin.x += deltaX;
+                self.nextViewController.view.frame = frame;
+                self.nextViewController.view.transform = CGAffineTransformMakeRotation(rotation);
+            }
+        } else {
+            self.nextViewController.view.hidden = YES;
+        }
+    }
 }
 
 - (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
@@ -270,8 +309,6 @@
     frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
     subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset, 0);
 }
-
-#pragma mark Showing & Hiding Shelf
 
 #pragma mark Hiding Shelf
 
@@ -355,10 +392,7 @@
     [UIView animateWithDuration:0.2
                      animations:^{
                          self.pageControl.alpha = 1;
-                         CATransform3D transformation = CATransform3DIdentity;
-                         transformation.m34 = -1.0/500.0;
-                         transformation = CATransform3DTranslate(transformation, 0, 0, -200);
-                         viewController.view.layer.transform = transformation;
+                         viewController.view.layer.transform = self.scrollView.layer.transform;
                          for (UIViewController *viewController in self.visibleSubViewControllers) {
                              if (viewController.view.superview == self.scrollView) {
                                  viewController.view.alpha = 1;
@@ -433,9 +467,47 @@
 
 #pragma mark UIScrollViewDelegate
 
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView;
+{
+    self.addingViewController = NO;
+}
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView;
 {
     [self updateShelf];
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate;
+{
+    CGRect scrollViewBounds = self.scrollView.bounds;
+    CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
+    
+    int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
+    
+    if (lastNeededPageIndex == self.numberOfPages) {
+        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;
+        
+        if (self.nextViewController) {
+            if (offset > 0.4) {
+                UIViewController *nextViewController = self.nextViewController;
+                [self.nextViewController.view removeFromSuperview];
+                [UIView animateWithDuration:0.2 animations:^{
+                   self.nextViewController.view.alpha = 1; 
+                }];
+                self.nextViewController = nil;
+                [self addSubViewController:nextViewController];
+                self.addingViewController = YES;
+            }
+        }
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
+{
+    if (self.nextViewController) {
+        [self.nextViewController.view removeFromSuperview];
+        self.nextViewController = nil;
+    }
 }
 
 @end

@@ -6,6 +6,7 @@
 //  Copyright (c) 2012 Tobias Kräntzer. All rights reserved.
 //
 
+#import "TKShelfViewControllerDelegate.h"
 #import "TKShelfViewController.h"
 
 #import "TKAppDelegate.h"
@@ -17,6 +18,9 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath;{return [[UITableViewCell alloc] init];}
 @end
 
+@interface TKAppDelegate () <TKShelfViewControllerDelegate>
+
+@end
 
 
 @implementation TKAppDelegate
@@ -26,8 +30,8 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     
     TKShelfViewController *shelf = [[TKShelfViewController alloc] init];
-    
-    for (int i = 0; i < 5; i++) {
+    shelf.delegate = self;
+    for (int i = 0; i < 1; i++) {
         TableViewController *viewController = [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
         [shelf addSubViewController:viewController];
     }
@@ -35,6 +39,13 @@
     self.window.rootViewController = shelf;
     [self.window makeKeyAndVisible];
     return YES;
+}
+
+#pragma mark TKShelfViewControllerDelegate
+
+- (UIViewController *)nextViewControllerForShelf:(TKShelfViewController *)aShelfViewController;
+{
+    return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
 }
 
 @end
