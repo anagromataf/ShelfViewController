@@ -15,7 +15,7 @@
 
 #import "TKShelfViewController.h"
 
-#define kTKShelfViewControllerHorizontalInset 20.0
+#define kTKShelfViewControllerPagePadding 20.0
 #define kTKShelfViewControllerPageControlHeight 44.0
 
 @interface TKShelfViewController () <UIScrollViewDelegate>
@@ -23,16 +23,17 @@
 @property (nonatomic, strong) UIPageControl *pageControl;
 
 #pragma mark ViewController Containment
-@property (nonatomic, readwrite) NSArray *subViewControllers;
+@property (nonatomic, readwrite) NSArray *viewControllers;
 
 #pragma mark Shelf Management
-@property (nonatomic, readonly) NSUInteger numberOfPages;
-@property (nonatomic, readonly) NSUInteger currentPage;
-@property (nonatomic, readonly) NSMutableSet *visibleSubViewControllers;
-@property (nonatomic, assign) BOOL addingViewController;
+@property (nonatomic, readonly) NSUInteger numberOfViewControllers;
+@property (nonatomic, readonly) NSUInteger indexOfCurrentViewController;
+@property (nonatomic, readonly) UIViewController *currentViewController;
+@property (nonatomic, readonly) NSMutableSet *visibleViewControllers;
+@property (nonatomic, assign) BOOL currentlyAddingViewController;
 @property (nonatomic, strong) UIViewController *nextViewController;
 - (void)updateShelf;
-- (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
+- (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
 
 #pragma mark Showing & Hiding Shelf
 
@@ -52,7 +53,7 @@
 
 #pragma mark Paging
 - (void)pageControlDidChangeValue:(id)sender;
-- (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
+- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
 
 #pragma mark Handle Gestures
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
@@ -66,7 +67,7 @@
 
 #pragma mark Life-cycle
 
-@synthesize visibleSubViewControllers = _visibleSubViewControllers;
+@synthesize visibleViewControllers = _visibleViewControllers;
 
 #pragma mark UIViewController
 
@@ -77,7 +78,7 @@
     // Create Scroll View
     // ------------------
     
-    CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerHorizontalInset, 0);
+    CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerPagePadding, 0);
     
     self.scrollView = [[UIScrollView alloc] initWithFrame:scrollViewFrame];
     self.scrollView.clipsToBounds = NO;
@@ -134,69 +135,86 @@
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
 {
-    NSUInteger currentPage = self.currentPage;
+    NSUInteger currentViewController = self.indexOfCurrentViewController;
     
     [UIView animateWithDuration:duration animations:^{
-        CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerHorizontalInset, 0);
+        CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerPagePadding, 0);
         self.scrollView.frame = scrollViewFrame;
     }];
     
-    self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentPage, 0);
+    self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentViewController, 0);
     
-    for (UIViewController *viewController in self.visibleSubViewControllers) {
+    for (UIViewController *viewController in self.visibleViewControllers) {
         if (viewController.view.superview == self.scrollView) {
-            NSUInteger index = [self.subViewControllers indexOfObject:viewController];
-            [self configureSubview:viewController.view forIndex:index];
+            NSUInteger index = [self.viewControllers indexOfObject:viewController];
+            [self configureView:viewController.view forIndex:index];
         }
     }
 }
 
 #pragma mark ViewController Containment
 
-- (void)addSubViewController:(UIViewController *)aViewController;
+
+- (void)addViewController:(UIViewController *)aViewController;
 {
-    NSMutableArray *subViewControllers = [self.subViewControllers mutableCopy];
-    if (!subViewControllers) {
-        subViewControllers = [[NSMutableArray alloc] init];
+    [self addViewController:aViewController animated:NO];
+}
+
+- (void)addViewController:(UIViewController *)aViewController animated:(BOOL)animated;
+{
+    NSMutableArray *viewControllers = [self.viewControllers mutableCopy];
+    if (!viewControllers) {
+        viewControllers = [[NSMutableArray alloc] init];
     }
-    [subViewControllers addObject:aViewController];
-    self.subViewControllers = subViewControllers;
+    [viewControllers addObject:aViewController];
+    self.viewControllers = viewControllers;
     
     [self updateShelf];
 }
 
-- (void)removeSubViewController:(UIViewController *)aViewController;
+- (void)removeViewController:(UIViewController *)aViewController;
 {
-    NSMutableArray *subViewControllers = [self.subViewControllers mutableCopy];
-    if (!subViewControllers) {
-        subViewControllers = [[NSMutableArray alloc] init];
+    [self removeViewController:aViewController animated:NO];
+}
+
+- (void)removeViewController:(UIViewController *)aViewController animated:(BOOL)animated;
+{
+    NSMutableArray *viewControllers = [self.viewControllers mutableCopy];
+    if (!viewControllers) {
+        viewControllers = [[NSMutableArray alloc] init];
     }
-    [subViewControllers removeObject:aViewController];
-    self.subViewControllers = subViewControllers;
+    [viewControllers removeObject:aViewController];
+    self.viewControllers = viewControllers;
     
     [self updateShelf];
 }
 
 #pragma mark Shelf Management
 
-- (NSUInteger)numberOfPages;
+- (NSUInteger)numberOfViewControllers;
 {
-    return [self.subViewControllers count];
+    return [self.viewControllers count];
 }
 
-- (NSUInteger)currentPage;
+- (NSUInteger)indexOfCurrentViewController;
 {
     CGRect scrollViewBounds = self.scrollView.bounds;
     CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
     return floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
 }
 
-- (NSMutableSet *)visibleSubViewControllers;
+- (UIViewController *)currentViewController;
 {
-    if (_visibleSubViewControllers == nil) {
-        _visibleSubViewControllers = [[NSMutableSet alloc] init];
+    NSUInteger index = self.indexOfCurrentViewController;
+    return [self.viewControllers objectAtIndex:index];
+}
+
+- (NSMutableSet *)visibleViewControllers;
+{
+    if (_visibleViewControllers == nil) {
+        _visibleViewControllers = [[NSMutableSet alloc] init];
     }
-    return _visibleSubViewControllers;
+    return _visibleViewControllers;
 }
 
 - (void)updateShelf;
@@ -208,24 +226,24 @@
     CGRect scrollViewBounds = self.scrollView.bounds;
     CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
     
-    self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(scrollViewBounds) * self.numberOfPages,
+    self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(scrollViewBounds) * self.numberOfViewControllers,
                                              CGRectGetHeight(scrollViewBounds));
     
-    self.pageControl.numberOfPages = self.numberOfPages;
+    self.pageControl.numberOfPages = self.numberOfViewControllers;
     int currentPageIndex = floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
-    self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfPages);
+    self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfViewControllers);
     
-    int firstNeededPageIndex = floor((CGRectGetMinX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
-    int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
+    int indexOfFirstNeededViewController = floor((CGRectGetMinX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
+    int indexOfLastNeededViewController = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
     
     
     // Remove not needed view controllers
     // ----------------------------------
     
     NSMutableSet *removedViewControllers = [[NSMutableSet alloc] init];
-    for (UIViewController *viewController in self.visibleSubViewControllers) {
-        NSUInteger index = [self.subViewControllers indexOfObject:viewController];
-        if (index < firstNeededPageIndex || index > lastNeededPageIndex) {
+    for (UIViewController *viewController in self.visibleViewControllers) {
+        NSUInteger index = [self.viewControllers indexOfObject:viewController];
+        if (index < indexOfFirstNeededViewController || index > indexOfLastNeededViewController) {
             
             [viewController beginAppearanceTransition:NO animated:NO];
             [viewController.view removeFromSuperview];
@@ -238,31 +256,31 @@
             [removedViewControllers addObject:viewController];
         }
     }
-    [self.visibleSubViewControllers minusSet:removedViewControllers];
+    [self.visibleViewControllers minusSet:removedViewControllers];
     
     
     // Add missing view controllers
     // ----------------------------
     
-    for (int index = firstNeededPageIndex; index <= lastNeededPageIndex; index++) {
+    for (int index = indexOfFirstNeededViewController; index <= indexOfLastNeededViewController; index++) {
         
-        if (index < 0 || index >= self.numberOfPages) {
+        if (index < 0 || index >= self.numberOfViewControllers) {
             continue;
         }
         
-        UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
-        if (![self.visibleSubViewControllers containsObject:viewController]) {
+        UIViewController *viewController = [self.viewControllers objectAtIndex:index];
+        if (![self.visibleViewControllers containsObject:viewController]) {
             
             [viewController willMoveToParentViewController:self];
             [self addChildViewController:viewController];
             [viewController didMoveToParentViewController:self];
             
-            [self.visibleSubViewControllers addObject:viewController];
+            [self.visibleViewControllers addObject:viewController];
             
             [viewController beginAppearanceTransition:YES animated:NO];
             
             [self.scrollView addSubview:viewController.view];
-            [self configureSubview:viewController.view forIndex:index];
+            [self configureView:viewController.view forIndex:index];
             [viewController.view setUserInteractionEnabled:NO];
             
             [viewController endAppearanceTransition];
@@ -273,10 +291,10 @@
     // Add new ViewController
     // ----------------------
     
-    if (lastNeededPageIndex == self.numberOfPages) {
-        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;        
+    if (indexOfLastNeededViewController == self.numberOfViewControllers) {
+        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - indexOfLastNeededViewController;        
         if (offset > 0.2) {
-            if (self.addingViewController == NO &&
+            if (self.currentlyAddingViewController == NO &&
                 self.nextViewController == nil) {
                 
                 self.nextViewController = [self.delegate nextViewControllerForShelf:self];
@@ -287,7 +305,7 @@
                 self.nextViewController.view.hidden = NO;
                 self.nextViewController.view.alpha = (offset - 0.2) * 3;
                 
-                [self configureSubview:self.nextViewController.view forIndex:lastNeededPageIndex];
+                [self configureView:self.nextViewController.view forIndex:indexOfLastNeededViewController];
                 
                 CGFloat deltaX = MAX(0, (0.4 - offset)) * 300;
                 CGFloat rotation = MAX(0, (0.4 - offset)) * -30 * M_PI / 180.0;
@@ -303,11 +321,11 @@
     }
 }
 
-- (void)configureSubview:(UIView *)subview forIndex:(NSUInteger)index;
+- (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
 {
     CGRect frame = self.scrollView.bounds;
     frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
-    subview.frame = CGRectInset(frame, kTKShelfViewControllerHorizontalInset, 0);
+    subview.frame = CGRectInset(frame, kTKShelfViewControllerPagePadding, 0);
 }
 
 #pragma mark Hiding Shelf
@@ -317,8 +335,7 @@
     self.scrollView.scrollEnabled = NO;
     self.pageControl.enabled = NO;
     
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     
     [viewController.view removeFromSuperview];
     [self.view insertSubview:viewController.view belowSubview:self.pageControl];
@@ -335,15 +352,14 @@
         return;
     }
     
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     
     [self prepareHidingShelf];
     [UIView animateWithDuration:0.2
                      animations:^{
                          viewController.view.layer.transform = CATransform3DIdentity;
                          self.pageControl.alpha = 0;
-                         for (UIViewController *viewController in self.visibleSubViewControllers) {
+                         for (UIViewController *viewController in self.visibleViewControllers) {
                              if (viewController.view.superview == self.scrollView) {
                                  viewController.view.alpha = 0;
                              }
@@ -359,8 +375,7 @@
 {
     self.pageControl.hidden = YES;
     
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     [viewController.view setUserInteractionEnabled:YES];
     
     self.animatingShelf = NO;
@@ -371,8 +386,7 @@
 
 - (void)prepareShowingShelf;
 {
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     [viewController.view setUserInteractionEnabled:NO];
     
     self.pageControl.hidden = NO;
@@ -385,15 +399,14 @@
         return;
     }
     
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     viewController.view.layer.transform = CATransform3DIdentity;
     [self prepareShowingShelf];
     [UIView animateWithDuration:0.2
                      animations:^{
                          self.pageControl.alpha = 1;
                          viewController.view.layer.transform = self.scrollView.layer.transform;
-                         for (UIViewController *viewController in self.visibleSubViewControllers) {
+                         for (UIViewController *viewController in self.visibleViewControllers) {
                              if (viewController.view.superview == self.scrollView) {
                                  viewController.view.alpha = 1;
                              }
@@ -408,12 +421,11 @@
 
 - (void)finalizeShowingShelf;
 {
-    NSUInteger index = self.currentPage;
-    UIViewController *viewController = [self.subViewControllers objectAtIndex:index];
+    UIViewController *viewController = self.currentViewController;
     [viewController.view removeFromSuperview];
     viewController.view.layer.transform = CATransform3DIdentity;
     [self.scrollView addSubview:viewController.view];
-    [self configureSubview:viewController.view forIndex:index];
+    [self configureView:viewController.view forIndex:self.indexOfCurrentViewController];
     
     self.pageControl.enabled = YES;
     self.scrollView.scrollEnabled = YES;
@@ -426,11 +438,11 @@
 - (void)pageControlDidChangeValue:(id)sender;
 {
     if (self.pageControl == sender) {
-        [self showSubviewAtIndex:self.pageControl.currentPage animated:YES];
+        [self showViewControllerForIndex:self.pageControl.currentPage animated:YES];
     }
 }
 
-- (void)showSubviewAtIndex:(NSUInteger)index animated:(BOOL)animated;
+- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
 {
     [self.scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * index, 0) animated:animated];
 }
@@ -469,7 +481,7 @@
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView;
 {
-    self.addingViewController = NO;
+    self.currentlyAddingViewController = NO;
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView;
@@ -484,7 +496,7 @@
     
     int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
     
-    if (lastNeededPageIndex == self.numberOfPages) {
+    if (lastNeededPageIndex == self.numberOfViewControllers) {
         CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;
         
         if (self.nextViewController) {
@@ -495,8 +507,8 @@
                    self.nextViewController.view.alpha = 1; 
                 }];
                 self.nextViewController = nil;
-                [self addSubViewController:nextViewController];
-                self.addingViewController = YES;
+                [self addViewController:nextViewController];
+                self.currentlyAddingViewController = YES;
             }
         }
     }

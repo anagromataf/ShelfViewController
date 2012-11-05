@@ -16,9 +16,12 @@
 
 #pragma mark ViewController Containment
 
-@property (nonatomic, readonly) NSArray *subViewControllers;
+@property (nonatomic, readonly) NSArray *viewControllers;
 
-- (void)addSubViewController:(UIViewController *)aViewController;
-- (void)removeSubViewController:(UIViewController *)aViewController;
+- (void)addViewController:(UIViewController *)aViewController;
+- (void)addViewController:(UIViewController *)aViewController animated:(BOOL)animated;
+
+- (void)removeViewController:(UIViewController *)aViewController;
+- (void)removeViewController:(UIViewController *)aViewController animated:(BOOL)animated;
 
 @end

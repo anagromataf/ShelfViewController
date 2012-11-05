@@ -31,9 +31,9 @@
     
     TKShelfViewController *shelf = [[TKShelfViewController alloc] init];
     shelf.delegate = self;
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 5; i++) {
         TableViewController *viewController = [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
-        [shelf addSubViewController:viewController];
+        [shelf addViewController:viewController];
     }
     
     self.window.rootViewController = shelf;
