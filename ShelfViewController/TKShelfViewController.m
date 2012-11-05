@@ -514,6 +514,13 @@
     }
 }
 
+- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView;
+{
+    if (self.currentlyAddingViewController) {
+        [self showViewControllerForIndex:self.numberOfViewControllers - 1 animated:YES];
+    }
+}
+
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
 {
     if (self.nextViewController) {
