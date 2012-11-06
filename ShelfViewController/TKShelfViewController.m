@@ -18,7 +18,7 @@
 #define kTKShelfViewControllerPagePadding 20.0
 #define kTKShelfViewControllerPageControlHeight 44.0
 
-@interface TKShelfViewController () <UIScrollViewDelegate>
+@interface TKShelfViewController () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIPageControl *pageControl;
 
@@ -33,6 +33,9 @@
 #pragma mark Adding View Controller
 @property (nonatomic, assign) BOOL canAddViewController;
 @property (nonatomic, readonly) UIView *placeholderView;
+
+#pragma mark Removing View Controller
+@property (nonatomic, assign) BOOL canRemoveViewController;
 
 #pragma mark Showing & Hiding Shelf
 
@@ -58,6 +61,7 @@
 #pragma mark Handle Gestures
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
 - (void)handleTapGesture:(UITapGestureRecognizer *)tapGestureRecognizer;
+- (void)handlePanGesture:(UIPanGestureRecognizer *)panGestureRecognizer;
 
 @end
 
@@ -149,6 +153,10 @@
     
     self.tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
     [self.view addGestureRecognizer:self.tapGestureRecognizer];
+    
+    self.panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGesture:)];
+    self.panGestureRecognizer.delegate = self;
+    [self.view addGestureRecognizer:self.panGestureRecognizer];
     
     
     // Get number of ViewControllers
@@ -472,10 +480,67 @@
     [self hideShelf:YES];
 }
 
+- (void)handlePanGesture:(UIPanGestureRecognizer *)panGestureRecognizer;
+{
+    UIViewController *viewController = self.currentViewController;
+    NSUInteger index = self.indexOfCurrentViewController;
+    CGRect frame = viewController.view.frame;
+    
+    [self configureView:viewController.view forIndex:index];
+    
+    CGPoint translation = [panGestureRecognizer translationInView:viewController.view];
+    
+    switch (panGestureRecognizer.state) {
+        case UIGestureRecognizerStateBegan:
+            if ([self.delegate respondsToSelector:@selector(shelfController:canRemoveViewController:atIndex:)]) {
+                self.canRemoveViewController = [self.delegate shelfController:self canRemoveViewController:viewController atIndex:index];
+            }
+            break;
+            
+        case UIGestureRecognizerStateChanged:
+        {
+            if (self.canRemoveViewController && translation.y > 2) {
+                self.scrollView.scrollEnabled = NO;
+                frame.origin.y = translation.y;
+                viewController.view.frame = frame;
+            }
+            break;
+        }
+        
+        case UIGestureRecognizerStateEnded:
+        {
+            if (self.canRemoveViewController && translation.y > CGRectGetHeight(frame) / 2) {
+                NSLog(@"Remove ...");
+            }
+        }
+        
+        case UIGestureRecognizerStateCancelled:
+        case UIGestureRecognizerStateFailed:
+            self.scrollView.scrollEnabled = YES;
+            break;
+                    
+        default:
+            break;
+    }
+}
+
+#pragma mark UIGestureRecognizerDelegate
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
+{
+    if (gestureRecognizer == self.panGestureRecognizer && otherGestureRecognizer == self.scrollView.panGestureRecognizer) {
+        return YES;
+    }
+    
+    return NO;
+}
+
 #pragma mark UIScrollViewDelegate
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView;
 {
+    self.panGestureRecognizer.enabled = NO;
+    
     if ([self.delegate respondsToSelector:@selector(shelfController:canAddViewControllerAtIndex:)]) {
         self.canAddViewController = [self.delegate shelfController:self canAddViewControllerAtIndex:self.numberOfViewControllers];
     }
@@ -488,6 +553,8 @@
 
 - (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView;
 {
+    self.placeholderView.hidden = YES;
+    
     if (self.canAddViewController) {
         CGRect scrollViewBounds = self.scrollView.bounds;
         CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
@@ -513,6 +580,7 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
 {
     self.canAddViewController = NO;
+    self.panGestureRecognizer.enabled = YES;
 }
 
 @end

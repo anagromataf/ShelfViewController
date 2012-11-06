@@ -80,4 +80,15 @@
     NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
 }
 
+- (BOOL)shelfController:(TKShelfViewController *)shelfController canRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
+    return YES;
+}
+
+- (void)shelfController:(TKShelfViewController *)shelfController didRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
+}
+
 @end
