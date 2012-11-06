@@ -11,8 +11,24 @@
 @class TKShelfViewController;
 
 @protocol TKShelfViewControllerDelegate <NSObject>
+
+#pragma mark TKShelfViewControllerDelegate
+
+- (NSUInteger)numberOfViewControllerInShelfController:(TKShelfViewController *)shelfController;
+- (UIViewController *)shelfController:(TKShelfViewController *)shelfController viewControllerAtIndex:(NSUInteger)index;
+
 @optional
 
-- (UIViewController *)additionalViewControllerForShelfController:(TKShelfViewController *)aShelfViewController;
+- (void)shelfController:(TKShelfViewController *)shelfController willSelectViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+- (void)shelfController:(TKShelfViewController *)shelfController didSelectViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+
+- (void)shelfControllerWillPresentShelf:(TKShelfViewController *)shelfController;
+- (void)shelfControllerDidPresentShelf:(TKShelfViewController *)shelfController;
+
+- (BOOL)shelfController:(TKShelfViewController *)shelfController shouldAddViewControllerAtIndex:(NSUInteger)index;
+- (void)shelfController:(TKShelfViewController *)shelfController didAddViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+
+- (BOOL)shelfController:(TKShelfViewController *)shelfController shouldRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+- (void)shelfController:(TKShelfViewController *)shelfController didRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 
 @end

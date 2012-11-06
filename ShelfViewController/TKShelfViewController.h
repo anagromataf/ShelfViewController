@@ -14,14 +14,4 @@
 
 @property (nonatomic, weak) id<TKShelfViewControllerDelegate> delegate;
 
-#pragma mark ViewController Containment
-
-@property (nonatomic, readonly) NSArray *viewControllers;
-
-- (void)addViewController:(UIViewController *)aViewController;
-- (void)addViewController:(UIViewController *)aViewController animated:(BOOL)animated;
-
-- (void)removeViewController:(UIViewController *)aViewController;
-- (void)removeViewController:(UIViewController *)aViewController animated:(BOOL)animated;
-
 @end

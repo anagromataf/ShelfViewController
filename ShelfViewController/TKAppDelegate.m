@@ -31,10 +31,6 @@
     
     TKShelfViewController *shelf = [[TKShelfViewController alloc] init];
     shelf.delegate = self;
-    for (int i = 0; i < 5; i++) {
-        TableViewController *viewController = [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
-        [shelf addViewController:viewController];
-    }
     
     self.window.rootViewController = shelf;
     [self.window makeKeyAndVisible];
@@ -46,6 +42,38 @@
 - (UIViewController *)additionalViewControllerForShelfController:(TKShelfViewController *)aShelfViewController;
 {
     return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
+}
+
+#pragma mark TKShelfViewControllerDelegate
+
+- (NSUInteger)numberOfViewControllerInShelfController:(TKShelfViewController *)shelfController;
+{
+    return 5;
+}
+
+- (UIViewController *)shelfController:(TKShelfViewController *)shelfController viewControllerAtIndex:(NSUInteger)index;
+{
+    return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
+}
+
+- (void)shelfController:(TKShelfViewController *)shelfController willSelectViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
+}
+
+- (void)shelfController:(TKShelfViewController *)shelfController didSelectViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
+}
+
+- (void)shelfControllerWillPresentShelf:(TKShelfViewController *)shelfController;
+{
+    NSLog(@"%s", __FUNCTION__);
+}
+
+- (void)shelfControllerDidPresentShelf:(TKShelfViewController *)shelfController;
+{
+    NSLog(@"%s", __FUNCTION__);
 }
 
 @end
