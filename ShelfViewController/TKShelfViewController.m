@@ -30,6 +30,10 @@
 - (void)updateShelf;
 - (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
 
+#pragma mark Adding View Controller
+@property (nonatomic, assign) BOOL canAddViewController;
+@property (nonatomic, readonly) UIView *placeholderView;
+
 #pragma mark Showing & Hiding Shelf
 
 @property (nonatomic, strong) UIPinchGestureRecognizer *pinchGestureRecognizer;
@@ -64,6 +68,7 @@
 #pragma mark Life-cycle
 
 @synthesize visibleViewControllers = _visibleViewControllers;
+@synthesize placeholderView = _placeholderView;
 
 #pragma mark Simple Accessors
 
@@ -73,6 +78,19 @@
         _visibleViewControllers = [[NSMutableDictionary alloc] init];
     }
     return _visibleViewControllers;
+}
+
+- (UIView *)placeholderView;
+{
+    if (_placeholderView == nil) {
+        _placeholderView = [[UIView alloc] initWithFrame:CGRectZero];
+        _placeholderView.backgroundColor = [UIColor clearColor];
+        _placeholderView.layer.borderColor = [[UIColor grayColor] CGColor];
+        _placeholderView.layer.borderWidth = 3.0;
+        _placeholderView.hidden = YES;
+        [self.scrollView addSubview:_placeholderView];
+    }
+    return _placeholderView;
 }
 
 #pragma mark UIViewController
@@ -157,8 +175,10 @@
     self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentViewController, 0);
     
     [self.visibleViewControllers enumerateKeysAndObjectsUsingBlock:^(NSNumber *indexObj, UIViewController *viewController, BOOL *stop) {
-        NSUInteger index = [indexObj unsignedIntegerValue];
-        [self configureView:viewController.view forIndex:index];
+        if (viewController.view.superview == self.scrollView) {
+            NSUInteger index = [indexObj unsignedIntegerValue];
+            [self configureView:viewController.view forIndex:index];
+        }
     }];
 }
 
@@ -177,6 +197,49 @@
     return [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
 }
 
+- (UIViewController *)visibleViewControllerAtIndex:(NSUInteger)index
+{
+    UIViewController *viewController = [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
+    if (!viewController) {
+        viewController = [self.delegate shelfController:self viewControllerAtIndex:index];
+        NSAssert(viewController, @"Expecting a view controller at index: %d", index);
+        
+        [viewController willMoveToParentViewController:self];
+        [self addChildViewController:viewController];
+        [viewController didMoveToParentViewController:self];
+        
+        [self.visibleViewControllers setObject:viewController forKey:[NSNumber numberWithUnsignedInteger:index]];
+        
+        [viewController beginAppearanceTransition:YES animated:NO];
+        
+        [self.scrollView addSubview:viewController.view];
+        [self configureView:viewController.view forIndex:index];
+        
+        [viewController.view setUserInteractionEnabled:self.shelfHidden];
+        
+        [viewController endAppearanceTransition];
+    }
+    return viewController;
+}
+
+- (void)removeVisibleViewController:(UIViewController *)viewController
+{
+    [viewController beginAppearanceTransition:NO animated:NO];
+    [viewController.view removeFromSuperview];
+    [viewController endAppearanceTransition];
+    
+    [viewController willMoveToParentViewController:nil];
+    [viewController removeFromParentViewController];
+    [viewController didMoveToParentViewController:nil];
+}
+
+- (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
+{
+    CGRect frame = self.scrollView.bounds;
+    frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
+    subview.frame = CGRectInset(frame, kTKShelfViewControllerPagePadding, 0);
+}
+
 - (void)updateShelf;
 {
     if (self.scrollView == nil) {
@@ -190,8 +253,7 @@
                                              CGRectGetHeight(scrollViewBounds));
     
     self.pageControl.numberOfPages = self.numberOfViewControllers;
-    int currentPageIndex = floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
-    self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfViewControllers);
+    self.pageControl.currentPage = MIN(MAX(0, self.indexOfCurrentViewController), self.numberOfViewControllers);
     
     int indexOfFirstNeededViewController = floor((CGRectGetMinX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
     int indexOfLastNeededViewController = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
@@ -205,15 +267,9 @@
         NSUInteger index = [indexObj unsignedIntegerValue];
         if (index < indexOfFirstNeededViewController || index > indexOfLastNeededViewController) {
             
-            [viewController beginAppearanceTransition:NO animated:NO];
-            [viewController.view removeFromSuperview];
-            [viewController endAppearanceTransition];
+            [self removeVisibleViewController:viewController];
             
-            [viewController willMoveToParentViewController:nil];
-            [viewController removeFromParentViewController];
-            [viewController didMoveToParentViewController:nil];
-            
-            [removedViewControllers addObject:indexObj];
+            [removedViewControllers addObject:[NSNumber numberWithUnsignedInteger:index]];
         }
     }];
     [self.visibleViewControllers removeObjectsForKeys:removedViewControllers];
@@ -228,34 +284,25 @@
             continue;
         }
         
-        UIViewController *viewController = [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
-        if (!viewController) {
-            viewController = [self.delegate shelfController:self viewControllerAtIndex:index];
-            NSAssert(viewController, @"Expecting a view controller at index: %d", index);
-            
-            [viewController willMoveToParentViewController:self];
-            [self addChildViewController:viewController];
-            [viewController didMoveToParentViewController:self];
-            
-            [self.visibleViewControllers setObject:viewController forKey:[NSNumber numberWithUnsignedInteger:index]];
-            
-            [viewController beginAppearanceTransition:YES animated:NO];
-            
-            [self.scrollView addSubview:viewController.view];
-            [self configureView:viewController.view forIndex:index];
-            
-            [viewController.view setUserInteractionEnabled:self.shelfHidden];
-            
-            [viewController endAppearanceTransition];
+        [self visibleViewControllerAtIndex:index];
+    }
+    
+    
+    // Additional ViewController
+    // -------------------------
+    
+    if (indexOfLastNeededViewController == self.numberOfViewControllers && self.canAddViewController) {
+        
+        CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - indexOfLastNeededViewController;
+        
+        if (offset > 0.2) {
+            self.placeholderView.hidden = NO;
+            self.placeholderView.alpha = (offset - 0.2) * 4.0;
+            [self configureView:self.placeholderView forIndex:indexOfLastNeededViewController];
+        } else {
+            self.placeholderView.hidden = YES;
         }
     }
-}
-
-- (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
-{
-    CGRect frame = self.scrollView.bounds;
-    frame.origin.x = index * CGRectGetWidth(self.scrollView.bounds);
-    subview.frame = CGRectInset(frame, kTKShelfViewControllerPagePadding, 0);
 }
 
 #pragma mark Hiding Shelf
@@ -427,9 +474,45 @@
 
 #pragma mark UIScrollViewDelegate
 
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView;
+{
+    if ([self.delegate respondsToSelector:@selector(shelfController:canAddViewControllerAtIndex:)]) {
+        self.canAddViewController = [self.delegate shelfController:self canAddViewControllerAtIndex:self.numberOfViewControllers];
+    }
+}
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView;
 {
     [self updateShelf];
+}
+
+- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView;
+{
+    if (self.canAddViewController) {
+        CGRect scrollViewBounds = self.scrollView.bounds;
+        CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
+        
+        int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
+        
+        NSUInteger index = self.numberOfViewControllers;
+        if (lastNeededPageIndex == index) {
+            
+            CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;
+            if (offset > 0.4) {
+                [self showViewControllerForIndex:index animated:YES];
+                self.numberOfViewControllers += 1;
+                UIViewController *viewController = [self visibleViewControllerAtIndex:index];
+                if ([self.delegate respondsToSelector:@selector(shelfController:didAddViewController:atIndex:)]) {
+                    [self.delegate shelfController:self didAddViewController:viewController atIndex:index];
+                }
+            }
+        }
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
+{
+    self.canAddViewController = NO;
 }
 
 @end

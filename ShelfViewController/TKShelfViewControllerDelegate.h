@@ -25,10 +25,10 @@
 - (void)shelfControllerWillPresentShelf:(TKShelfViewController *)shelfController;
 - (void)shelfControllerDidPresentShelf:(TKShelfViewController *)shelfController;
 
-- (BOOL)shelfController:(TKShelfViewController *)shelfController shouldAddViewControllerAtIndex:(NSUInteger)index;
+- (BOOL)shelfController:(TKShelfViewController *)shelfController canAddViewControllerAtIndex:(NSUInteger)index;
 - (void)shelfController:(TKShelfViewController *)shelfController didAddViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 
-- (BOOL)shelfController:(TKShelfViewController *)shelfController shouldRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+- (BOOL)shelfController:(TKShelfViewController *)shelfController canRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 - (void)shelfController:(TKShelfViewController *)shelfController didRemoveViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 
 @end

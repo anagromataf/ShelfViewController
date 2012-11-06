@@ -39,16 +39,9 @@
 
 #pragma mark TKShelfViewControllerDelegate
 
-- (UIViewController *)additionalViewControllerForShelfController:(TKShelfViewController *)aShelfViewController;
-{
-    return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
-}
-
-#pragma mark TKShelfViewControllerDelegate
-
 - (NSUInteger)numberOfViewControllerInShelfController:(TKShelfViewController *)shelfController;
 {
-    return 5;
+    return 1;
 }
 
 - (UIViewController *)shelfController:(TKShelfViewController *)shelfController viewControllerAtIndex:(NSUInteger)index;
@@ -74,6 +67,17 @@
 - (void)shelfControllerDidPresentShelf:(TKShelfViewController *)shelfController;
 {
     NSLog(@"%s", __FUNCTION__);
+}
+
+- (BOOL)shelfController:(TKShelfViewController *)shelfController canAddViewControllerAtIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %d", __FUNCTION__, index);
+    return YES;
+}
+
+- (void)shelfController:(TKShelfViewController *)shelfController didAddViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+{
+    NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
 }
 
 @end
