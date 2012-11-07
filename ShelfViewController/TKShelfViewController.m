@@ -22,6 +22,10 @@
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIPageControl *pageControl;
 
+#pragma mark Rotation
+@property (nonatomic, assign) BOOL isBeeingRotating;
+@property (nonatomic, assign) NSUInteger indexOfPreviousViewController;
+
 #pragma mark Shelf Management
 @property (nonatomic, assign) NSUInteger numberOfViewControllers;
 @property (nonatomic, readonly) NSUInteger indexOfCurrentViewController;
@@ -171,14 +175,30 @@
     [self updateShelf];
 }
 
+- (void)viewDidAppear:(BOOL)animated;
+{
+    self.scrollView.frame = CGRectInset(self.view.bounds, -kTKShelfViewControllerPagePadding, 0);
+    
+    [self.visibleViewControllers enumerateKeysAndObjectsUsingBlock:^(NSNumber *indexObj, UIViewController *viewController, BOOL *stop) {
+        if (viewController.view.superview == self.scrollView) {
+            NSUInteger index = [indexObj unsignedIntegerValue];
+            [self configureView:viewController.view forIndex:index];
+        }
+    }];
+}
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
+{
+    self.isBeeingRotating = YES;
+    self.indexOfPreviousViewController = self.indexOfCurrentViewController;
+}
+
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration;
 {
     NSUInteger currentViewController = self.indexOfCurrentViewController;
     
-    [UIView animateWithDuration:duration animations:^{
-        CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerPagePadding, 0);
-        self.scrollView.frame = scrollViewFrame;
-    }];
+    CGRect scrollViewFrame = CGRectInset(self.view.bounds, -kTKShelfViewControllerPagePadding, 0);
+    self.scrollView.frame = scrollViewFrame;
     
     self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * currentViewController, 0);
     
@@ -190,13 +210,18 @@
     }];
 }
 
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation;
+{
+    self.isBeeingRotating = NO;
+    self.scrollView.contentOffset = CGPointMake(CGRectGetWidth(self.scrollView.bounds) * self.indexOfPreviousViewController, 0);
+    [self updateShelf];
+}
+
 #pragma mark Shelf Management
 
 - (NSUInteger)indexOfCurrentViewController;
 {
-    CGRect scrollViewBounds = self.scrollView.bounds;
-    CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
-    return floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
+    return floor(CGRectGetMinX(self.scrollView.bounds) / CGRectGetWidth(self.scrollView.bounds));
 }
 
 - (UIViewController *)currentViewController;
@@ -254,6 +279,10 @@
         return;
     }
     
+    if (self.isBeeingRotating == YES) {
+        return;
+    }
+    
     CGRect scrollViewBounds = self.scrollView.bounds;
     CGRect convertedViewBounds = [self.scrollView convertRect:self.view.bounds fromView:self.view];
     
@@ -261,7 +290,9 @@
                                              CGRectGetHeight(scrollViewBounds));
     
     self.pageControl.numberOfPages = self.numberOfViewControllers;
-    self.pageControl.currentPage = MIN(MAX(0, self.indexOfCurrentViewController), self.numberOfViewControllers);
+    NSUInteger currentPageIndex = floor(CGRectGetMidX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds));
+
+    self.pageControl.currentPage = MIN(MAX(0, currentPageIndex), self.numberOfViewControllers);
     
     int indexOfFirstNeededViewController = floor((CGRectGetMinX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
     int indexOfLastNeededViewController = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
@@ -324,6 +355,7 @@
         [self.delegate shelfController:self willSelectViewController:viewController atIndex:index];
     }
     
+    self.panGestureRecognizer.enabled = NO;
     self.scrollView.scrollEnabled = NO;
     self.pageControl.enabled = NO;
     
@@ -428,6 +460,7 @@
     
     self.pageControl.enabled = YES;
     self.scrollView.scrollEnabled = YES;
+    self.panGestureRecognizer.enabled = YES;
     self.animatingShelf = NO;
     self.shelfHidden = NO;
     
@@ -486,8 +519,6 @@
     NSUInteger index = self.indexOfCurrentViewController;
     CGRect frame = viewController.view.frame;
     
-    [self configureView:viewController.view forIndex:index];
-    
     CGPoint translation = [panGestureRecognizer translationInView:viewController.view];
     
     switch (panGestureRecognizer.state) {
@@ -501,6 +532,7 @@
         {
             if (self.canRemoveViewController && translation.y > 2) {
                 self.scrollView.scrollEnabled = NO;
+                [self configureView:viewController.view forIndex:index];
                 frame.origin.y = translation.y;
                 viewController.view.frame = frame;
             }
@@ -511,6 +543,9 @@
         {
             if (self.canRemoveViewController && translation.y > CGRectGetHeight(frame) / 2) {
                 NSLog(@"Remove ...");
+                [UIView animateWithDuration:0.2 animations:^{
+                    [self configureView:viewController.view forIndex:index];
+                }];
             }
         }
         
@@ -562,16 +597,18 @@
         int lastNeededPageIndex = floor((CGRectGetMaxX(convertedViewBounds)) / CGRectGetWidth(scrollViewBounds));
         
         NSUInteger index = self.numberOfViewControllers;
+        
         if (lastNeededPageIndex == index) {
             
             CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;
             if (offset > 0.4) {
-                [self showViewControllerForIndex:index animated:YES];
-                self.numberOfViewControllers += 1;
                 UIViewController *viewController = [self visibleViewControllerAtIndex:index];
                 if ([self.delegate respondsToSelector:@selector(shelfController:didAddViewController:atIndex:)]) {
                     [self.delegate shelfController:self didAddViewController:viewController atIndex:index];
                 }
+                self.numberOfViewControllers += 1;
+                [self updateShelf];
+                [self showViewControllerForIndex:index animated:YES];
             }
         }
     }

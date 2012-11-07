@@ -41,7 +41,7 @@
 
 - (NSUInteger)numberOfViewControllerInShelfController:(TKShelfViewController *)shelfController;
 {
-    return 1;
+    return 3;
 }
 
 - (UIViewController *)shelfController:(TKShelfViewController *)shelfController viewControllerAtIndex:(NSUInteger)index;
