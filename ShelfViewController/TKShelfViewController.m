@@ -543,17 +543,19 @@
         {
             if (self.canRemoveViewController && translation.y > CGRectGetHeight(frame) / 2) {
                 NSLog(@"Remove ...");
-                [UIView animateWithDuration:0.2 animations:^{
-                    [self configureView:viewController.view forIndex:index];
-                }];
             }
         }
         
         case UIGestureRecognizerStateCancelled:
         case UIGestureRecognizerStateFailed:
+        {
             self.scrollView.scrollEnabled = YES;
+            [UIView animateWithDuration:0.2 animations:^{
+                [self configureView:viewController.view forIndex:index];
+            }];
             break;
-                    
+        }
+        
         default:
             break;
     }
