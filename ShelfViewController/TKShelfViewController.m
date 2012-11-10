@@ -21,6 +21,7 @@
 @interface TKShelfViewController () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIPageControl *pageControl;
+@property (nonatomic, strong) UIView *placeholderView;
 
 #pragma mark Rotation
 @property (nonatomic, assign) BOOL isBeeingRotating;
@@ -33,13 +34,16 @@
 @property (nonatomic, readonly) NSUInteger numberOfViewControllers;
 @property (nonatomic, readonly) NSUInteger indexOfCurrentViewController;
 @property (nonatomic, readonly) UIViewController *currentViewController;
-@property (nonatomic, readonly) NSMutableDictionary *visibleViewControllers;
-- (void)updateShelf;
+@property (nonatomic, strong) NSMutableDictionary *visibleViewControllers;
+- (UIViewController *)visibleViewControllerAtIndex:(NSUInteger)index;
+- (void)removeVisibleViewController:(UIViewController *)viewController;
 - (void)configureView:(UIView *)subview forIndex:(NSUInteger)index;
+- (void)updateShelf;
+- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
 
 #pragma mark Adding View Controller
 @property (nonatomic, assign) BOOL canAddViewController;
-@property (nonatomic, readonly) UIView *placeholderView;
+
 
 #pragma mark Removing View Controller
 @property (nonatomic, assign) BOOL canRemoveViewController;
@@ -63,7 +67,7 @@
 
 #pragma mark Paging
 - (void)pageControlDidChangeValue:(id)sender;
-- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
+
 
 #pragma mark Handle Gestures
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
@@ -81,34 +85,13 @@
 @synthesize visibleViewControllers = _visibleViewControllers;
 @synthesize placeholderView = _placeholderView;
 
-#pragma mark Simple Accessors
-
-- (NSMutableDictionary *)visibleViewControllers;
-{
-    if (_visibleViewControllers == nil) {
-        _visibleViewControllers = [[NSMutableDictionary alloc] init];
-    }
-    return _visibleViewControllers;
-}
-
-- (UIView *)placeholderView;
-{
-    if (_placeholderView == nil) {
-        _placeholderView = [[UIView alloc] initWithFrame:CGRectZero];
-        _placeholderView.backgroundColor = [UIColor clearColor];
-        _placeholderView.layer.borderColor = [[UIColor grayColor] CGColor];
-        _placeholderView.layer.borderWidth = 3.0;
-        _placeholderView.hidden = YES;
-        [self.scrollView addSubview:_placeholderView];
-    }
-    return _placeholderView;
-}
-
 #pragma mark UIViewController
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    self.visibleViewControllers = [[NSMutableDictionary alloc] init];
     
     // Create Scroll View
     // ------------------
@@ -164,6 +147,17 @@
     self.panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGesture:)];
     self.panGestureRecognizer.delegate = self;
     [self.view addGestureRecognizer:self.panGestureRecognizer];
+    
+    
+    // Placeholder View
+    // ----------------
+    
+    self.placeholderView = [[UIView alloc] initWithFrame:CGRectZero];
+    self.placeholderView.backgroundColor = [UIColor clearColor];
+    self.placeholderView.layer.borderColor = [[UIColor grayColor] CGColor];
+    self.placeholderView.layer.borderWidth = 3.0;
+    self.placeholderView.hidden = YES;
+    [self.scrollView addSubview:self.placeholderView];
     
     
     // Update the Shelf
@@ -232,7 +226,7 @@
     return [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
 }
 
-- (UIViewController *)visibleViewControllerAtIndex:(NSUInteger)index
+- (UIViewController *)visibleViewControllerAtIndex:(NSUInteger)index;
 {
     UIViewController *viewController = [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
     if (!viewController) {
@@ -256,7 +250,7 @@
     return viewController;
 }
 
-- (void)removeVisibleViewController:(UIViewController *)viewController
+- (void)removeVisibleViewController:(UIViewController *)viewController;
 {
     [viewController beginAppearanceTransition:NO animated:NO];
     [viewController.view removeFromSuperview];
@@ -343,6 +337,11 @@
             self.placeholderView.hidden = YES;
         }
     }
+}
+
+- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
+{
+    [self.scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * index, 0) animated:animated];
 }
 
 #pragma mark Add View Controller
@@ -500,11 +499,6 @@
     }
 }
 
-- (void)showViewControllerForIndex:(NSUInteger)index animated:(BOOL)animated;
-{
-    [self.scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * index, 0) animated:animated];
-}
-
 #pragma mark Handle Gestures
 
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)pinchGestureRecognizer;
@@ -647,6 +641,11 @@
 {
     self.canAddViewController = NO;
     self.panGestureRecognizer.enabled = YES;
+}
+
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView;
+{
+    
 }
 
 @end
