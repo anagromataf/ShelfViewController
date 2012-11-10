@@ -14,4 +14,9 @@
 
 @property (nonatomic, weak) id<TKShelfViewControllerDelegate> delegate;
 
+#pragma mark ViewController Containment
+
+- (void)addViewController:(UIViewController *)viewController animated:(BOOL)animated;
+- (void)removeViewController:(UIViewController *)viewController animated:(BOOL)animated;
+
 @end

@@ -32,22 +32,22 @@
     TKShelfViewController *shelf = [[TKShelfViewController alloc] init];
     shelf.delegate = self;
     
+    UIViewController *firstVC = [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
+    [shelf addViewController:firstVC animated:NO];
+    [shelf addViewController:[[TableViewController alloc] initWithStyle:UITableViewStyleGrouped] animated:NO];
+    
+    int64_t delayInSeconds = 2.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        [shelf removeViewController:firstVC animated:YES];
+    });
+    
     self.window.rootViewController = shelf;
     [self.window makeKeyAndVisible];
     return YES;
 }
 
 #pragma mark TKShelfViewControllerDelegate
-
-- (NSUInteger)numberOfViewControllerInShelfController:(TKShelfViewController *)shelfController;
-{
-    return 3;
-}
-
-- (UIViewController *)shelfController:(TKShelfViewController *)shelfController viewControllerAtIndex:(NSUInteger)index;
-{
-    return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
-}
 
 - (void)shelfController:(TKShelfViewController *)shelfController willSelectViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 {
@@ -69,13 +69,18 @@
     NSLog(@"%s", __FUNCTION__);
 }
 
-- (BOOL)shelfController:(TKShelfViewController *)shelfController canAddViewControllerAtIndex:(NSUInteger)index;
+- (BOOL)shelfController:(TKShelfViewController *)shelfController canInsertViewControllerAtIndex:(NSUInteger)index;
 {
     NSLog(@"%s %d", __FUNCTION__, index);
     return YES;
 }
 
-- (void)shelfController:(TKShelfViewController *)shelfController didAddViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
+- (UIViewController *)viewControllerToInsertAtIndex:(NSUInteger)index toShelfController:(TKShelfViewController *)shelfController;
+{
+    return [[TableViewController alloc] initWithStyle:UITableViewStyleGrouped];
+}
+
+- (void)shelfController:(TKShelfViewController *)shelfController didInsertViewController:(UIViewController *)viewController atIndex:(NSUInteger)index;
 {
     NSLog(@"%s %@ %d", __FUNCTION__, viewController, index);
 }

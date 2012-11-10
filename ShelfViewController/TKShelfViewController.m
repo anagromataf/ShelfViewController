@@ -26,8 +26,11 @@
 @property (nonatomic, assign) BOOL isBeeingRotating;
 @property (nonatomic, assign) NSUInteger indexOfPreviousViewController;
 
+#pragma mark ViewController Containment
+@property (nonatomic, readwrite) NSMutableOrderedSet *viewControllers;
+
 #pragma mark Shelf Management
-@property (nonatomic, assign) NSUInteger numberOfViewControllers;
+@property (nonatomic, readonly) NSUInteger numberOfViewControllers;
 @property (nonatomic, readonly) NSUInteger indexOfCurrentViewController;
 @property (nonatomic, readonly) UIViewController *currentViewController;
 @property (nonatomic, readonly) NSMutableDictionary *visibleViewControllers;
@@ -163,12 +166,6 @@
     [self.view addGestureRecognizer:self.panGestureRecognizer];
     
     
-    // Get number of ViewControllers
-    // -----------------------------
-    
-    self.numberOfViewControllers = [self.delegate numberOfViewControllerInShelfController:self];
-    
-    
     // Update the Shelf
     // ----------------
     
@@ -219,6 +216,11 @@
 
 #pragma mark Shelf Management
 
+- (NSUInteger)numberOfViewControllers;
+{
+    return [self.viewControllers count];
+}
+
 - (NSUInteger)indexOfCurrentViewController;
 {
     return floor(CGRectGetMinX(self.scrollView.bounds) / CGRectGetWidth(self.scrollView.bounds));
@@ -234,8 +236,7 @@
 {
     UIViewController *viewController = [self.visibleViewControllers objectForKey:[NSNumber numberWithUnsignedInteger:index]];
     if (!viewController) {
-        viewController = [self.delegate shelfController:self viewControllerAtIndex:index];
-        NSAssert(viewController, @"Expecting a view controller at index: %d", index);
+        viewController = [self.viewControllers objectAtIndex:index];
         
         [viewController willMoveToParentViewController:self];
         [self addChildViewController:viewController];
@@ -342,6 +343,27 @@
             self.placeholderView.hidden = YES;
         }
     }
+}
+
+#pragma mark Add View Controller
+
+- (void)addViewController:(UIViewController *)viewController animated:(BOOL)animated;
+{
+    if (self.viewControllers == nil) {
+        self.viewControllers = [NSMutableOrderedSet orderedSetWithObject:viewController];
+    } else {
+        [self.viewControllers addObject:viewController];
+    }
+    [self updateShelf];
+}
+
+#pragma mark Remove View Controller
+
+- (void)removeViewController:(UIViewController *)viewController animated:(BOOL)animated;
+{
+    [self removeVisibleViewController:viewController];
+    [self.viewControllers removeObject:viewController];
+    [self updateShelf];
 }
 
 #pragma mark Hiding Shelf
@@ -549,9 +571,10 @@
         case UIGestureRecognizerStateCancelled:
         case UIGestureRecognizerStateFailed:
         {
-            self.scrollView.scrollEnabled = YES;
             [UIView animateWithDuration:0.2 animations:^{
                 [self configureView:viewController.view forIndex:index];
+            } completion:^(BOOL finished) {
+                self.scrollView.scrollEnabled = YES;
             }];
             break;
         }
@@ -578,8 +601,12 @@
 {
     self.panGestureRecognizer.enabled = NO;
     
-    if ([self.delegate respondsToSelector:@selector(shelfController:canAddViewControllerAtIndex:)]) {
-        self.canAddViewController = [self.delegate shelfController:self canAddViewControllerAtIndex:self.numberOfViewControllers];
+    if ([self.delegate respondsToSelector:@selector(viewControllerToInsertAtIndex:toShelfController:)]) {
+        if ([self.delegate respondsToSelector:@selector(shelfController:canInsertViewControllerAtIndex:)]) {
+            self.canAddViewController = [self.delegate shelfController:self canInsertViewControllerAtIndex:self.numberOfViewControllers];
+        } else {
+            self.canAddViewController = YES;
+        }
     }
 }
 
@@ -604,11 +631,11 @@
             
             CGFloat offset = (CGRectGetMaxX(convertedViewBounds) / CGRectGetWidth(scrollViewBounds)) - lastNeededPageIndex;
             if (offset > 0.4) {
-                UIViewController *viewController = [self visibleViewControllerAtIndex:index];
-                if ([self.delegate respondsToSelector:@selector(shelfController:didAddViewController:atIndex:)]) {
-                    [self.delegate shelfController:self didAddViewController:viewController atIndex:index];
+                UIViewController *viewController = [self.delegate viewControllerToInsertAtIndex:index toShelfController:self];
+                [self.viewControllers addObject:viewController];
+                if ([self.delegate respondsToSelector:@selector(shelfController:didInsertViewController:atIndex:)]) {
+                    [self.delegate shelfController:self didInsertViewController:viewController atIndex:index];
                 }
-                self.numberOfViewControllers += 1;
                 [self updateShelf];
                 [self showViewControllerForIndex:index animated:YES];
             }
